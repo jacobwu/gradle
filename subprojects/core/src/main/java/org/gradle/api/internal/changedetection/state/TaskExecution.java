@@ -18,10 +18,13 @@ package org.gradle.api.internal.changedetection.state;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashCode;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import org.apache.commons.lang.SerializationUtils;
 import org.gradle.cache.BuildCacheKey;
 import org.gradle.cache.internal.BuildCacheKeyBuilder;
 import org.gradle.cache.internal.DefaultBuildCacheKeyBuilder;
+import org.gradle.util.HasherUtil;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
@@ -29,9 +32,12 @@ import java.math.BigInteger;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * The state for a single task execution.
@@ -40,7 +46,7 @@ public abstract class TaskExecution {
     private String taskClass;
     private HashCode taskClassLoaderHash;
     private HashCode taskActionsClassLoaderHash;
-    private Map<String, Object> inputProperties;
+    private Map<String, HashCode> inputPropertiesCacheKey;
     private Iterable<String> outputPropertyNamesForCacheKey;
     private ImmutableSet<String> declaredOutputFilePaths;
 
@@ -95,12 +101,15 @@ public abstract class TaskExecution {
         this.taskActionsClassLoaderHash = taskActionsClassLoaderHash;
     }
 
-    public Map<String, Object> getInputProperties() {
-        return inputProperties;
-    }
-
     public void setInputProperties(Map<String, Object> inputProperties) {
-        this.inputProperties = inputProperties;
+        SortedMap<String, HashCode> result = new TreeMap<String, HashCode>(new HashMap<String, HashCode>(inputProperties.size()));
+        for (Map.Entry<String, Object> entry : sortEntries(inputProperties.entrySet())) {
+            Hasher hasher = Hashing.md5().newHasher();
+            Object value = entry.getValue();
+            HasherUtil.putObject(hasher, value);
+            result.put(entry.getKey(), hasher.hash());
+        }
+        this.inputPropertiesCacheKey = result;
     }
 
     /**
@@ -128,13 +137,13 @@ public abstract class TaskExecution {
         builder.putBytes(taskClassLoaderHash.asBytes());
         builder.putBytes(taskActionsClassLoaderHash.asBytes());
 
-        // TODO:LPTR Use sorted maps instead of explicitly sorting entries here
-
-        for (Map.Entry<String, Object> entry : sortEntries(inputProperties.entrySet())) {
+        for (Map.Entry<String, HashCode> entry : inputPropertiesCacheKey.entrySet()) {
             builder.putString(entry.getKey());
             Object value = entry.getValue();
             appendToCacheKey(builder, value);
         }
+
+        // TODO:LPTR Use sorted maps instead of explicitly sorting entries here
 
         for (Map.Entry<String, FileCollectionSnapshot> entry : sortEntries(getInputFilesSnapshot().entrySet())) {
             builder.putString(entry.getKey());
@@ -147,6 +156,14 @@ public abstract class TaskExecution {
         }
 
         return builder.build();
+    }
+
+    public Map<String, HashCode> getInputPropertiesCacheKey() {
+        return inputPropertiesCacheKey;
+    }
+
+    public void setInputPropertiesCacheKey(Map<String, HashCode> inputPropertiesCacheKey) {
+        this.inputPropertiesCacheKey = inputPropertiesCacheKey;
     }
 
     private static <T> List<Map.Entry<String, T>> sortEntries(Set<Map.Entry<String, T>> entries) {

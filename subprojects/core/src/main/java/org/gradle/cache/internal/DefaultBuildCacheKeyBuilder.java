@@ -16,11 +16,11 @@
 
 package org.gradle.cache.internal;
 
-import com.google.common.base.Charsets;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import org.gradle.cache.BuildCacheKey;
+import org.gradle.util.HasherUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,64 +37,56 @@ public class DefaultBuildCacheKeyBuilder implements BuildCacheKeyBuilder {
     @Override
     public BuildCacheKeyBuilder putByte(byte b) {
         log("byte", b);
-        hasher.putInt(1);
-        hasher.putByte(b);
+        HasherUtil.putByte(hasher, b);
         return this;
     }
 
     @Override
     public BuildCacheKeyBuilder putBytes(byte[] bytes) {
         log("bytes", new ByteArrayToStringer(bytes));
-        hasher.putInt(bytes.length);
-        hasher.putBytes(bytes);
+        HasherUtil.putBytes(hasher, bytes);
         return this;
     }
 
     @Override
     public BuildCacheKeyBuilder putBytes(byte[] bytes, int off, int len) {
         log("bytes", new ByteArrayToStringer(bytes, off, len));
-        hasher.putInt(len);
-        hasher.putBytes(bytes, off, len);
+        HasherUtil.putBytes(hasher, bytes, off, len);
         return this;
     }
 
     @Override
     public BuildCacheKeyBuilder putInt(int i) {
         log("int", i);
-        hasher.putInt(4);
-        hasher.putInt(i);
+        HasherUtil.putInt(hasher, i);
         return this;
     }
 
     @Override
     public BuildCacheKeyBuilder putLong(long l) {
         log("long", l);
-        hasher.putInt(8);
-        hasher.putLong(l);
+        HasherUtil.putLong(hasher, l);
         return this;
     }
 
     @Override
     public BuildCacheKeyBuilder putDouble(double d) {
         log("double", d);
-        hasher.putInt(8);
-        hasher.putDouble(d);
+        HasherUtil.putDouble(hasher, d);
         return this;
     }
 
     @Override
     public BuildCacheKeyBuilder putBoolean(boolean b) {
         log("boolean", b);
-        hasher.putInt(1);
-        hasher.putBoolean(b);
+        HasherUtil.putBoolean(hasher, b);
         return this;
     }
 
     @Override
     public BuildCacheKeyBuilder putString(CharSequence charSequence) {
         log("string", charSequence);
-        hasher.putInt(charSequence.length());
-        hasher.putString(charSequence, Charsets.UTF_8);
+        HasherUtil.putString(hasher, charSequence);
         return this;
     }
 
